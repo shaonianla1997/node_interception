@@ -1,2 +1,3 @@
 *.js linguist-language=node
+*.gyp linguist-language=node
 *.cpp linguist-language=c++
