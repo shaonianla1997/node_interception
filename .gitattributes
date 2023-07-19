@@ -1,0 +1,2 @@
+*.js linguist-language=node
+*.cpp linguist-language=c++

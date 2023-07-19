@@ -2,6 +2,7 @@ node-interception
 ============
 
 [基于https://github.com/oblitum/Interception][latest-release]
+
 关键字：nodejs 键盘鼠标驱动级模拟、拦截；驱动级键鼠模拟；虚拟鼠标、虚拟键盘。
 
 用途
@@ -14,7 +15,7 @@ windows默认的键盘、鼠标模式为 <kbd>raw input</kbd> ,部分游戏或�
 安装使用
 --------
 
-. 双击“驱动安装.bat”进行驱动安装，安装后会自动重启；
-. <kbd>node index.js</kbd> 执行测试方法
+- 双击“驱动安装.bat”进行驱动安装，安装后会自动重启；
+- <kbd>node index.js</kbd> 执行测试方法
 
 [latest-release]: https://github.com/oblitum/interception/releases/latest

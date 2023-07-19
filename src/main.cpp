@@ -1,5 +1,6 @@
 #include <napi.h>
 #include "interception.h"
+#include "types.h"
 
 #include <Windows.h>
 
