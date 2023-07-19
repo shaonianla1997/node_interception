@@ -1,0 +1,9 @@
+{
+  "name": "node_interception",
+  "version": "0.0.1",
+  "description": "Node.js interception.",
+  "main": "index.js",
+  "dependencies": {
+    "node-addon-api": "^7.0.0"
+  }
+}
