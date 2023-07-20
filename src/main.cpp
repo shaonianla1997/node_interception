@@ -135,6 +135,10 @@ Napi::Value mouseClick(const Napi::CallbackInfo &info)
             break;
         }
     }
+    else
+    {
+        napi_throw_error(env, "BadParameter", "Null pointer in mouse button code.");
+    }
 
     if (info.Length() == 2)
     {
@@ -159,11 +163,186 @@ Napi::Value mouseClick(const Napi::CallbackInfo &info)
     return Napi::Number::New(env, 0);
 }
 
+Napi::Value mouseToggle(const Napi::CallbackInfo &info)
+{
+    InterceptionMouseState stateDown = INTERCEPTION_MOUSE_LEFT_BUTTON_DOWN;
+    InterceptionMouseState stateUp = INTERCEPTION_MOUSE_LEFT_BUTTON_UP;
+    bool down = false;
+    Napi::Env env = info.Env();
+    if (info.Length() > 0)
+    {
+        int action = info[0].As<Napi::Number>().Int32Value();
+        if (action == 0)
+        {
+            down = true;
+        }
+        else if (action == 1)
+        {
+            down = false;
+        }
+        else
+        {
+            napi_throw_error(env, "BadParameter", "Invalid mouse button state specified.");
+        }
+    }
+    else
+    {
+        napi_throw_error(env, "BadParameter", "Null pointer in mouse button code.");
+    }
+
+    if (info.Length() == 2)
+    {
+        int b = info[1].As<Napi::Number>().Int32Value();
+        switch (CheckMouseButton(b, &stateDown, &stateUp))
+        {
+        case -1:
+            napi_throw_error(env, "BadParameter", "Null pointer in mouse button code.");
+            break;
+        case -2:
+            napi_throw_error(env, "BadParameter", "Invalid mouse button specified.");
+            break;
+        default:
+            break;
+        }
+    }
+    else if (info.Length() > 2)
+    {
+        napi_throw_error(env, "BadParameter", "Invalid number of arguments.");
+    }
+    InterceptionContext context = interception_create_context();
+    InterceptionMouseStroke mouseStroke[1];
+    ZeroMemory(mouseStroke, sizeof(mouseStroke));
+    if (down)
+    {
+        mouseStroke[0].state = stateDown;
+    }
+    else
+    {
+        mouseStroke[0].state = stateUp;
+    }
+    interception_send(context, INTERCEPTION_MOUSE(0), (InterceptionStroke *)mouseStroke, sizeof(mouseStroke) / sizeof(InterceptionMouseStroke));
+    interception_destroy_context(context);
+    return Napi::Number::New(env, 0);
+}
+
+Napi::Value scrollMouse(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    if (info.Length() < 1)
+    {
+        napi_throw_error(env, "BadParameter", "Two parameters are required");
+        return Napi::Boolean::New(env, false);
+    }
+    int32_t rolling = info[0].As<Napi::Number>().Int32Value();
+    InterceptionContext context = interception_create_context();
+    InterceptionMouseStroke mouseStroke[1];
+
+    ZeroMemory(mouseStroke, sizeof(mouseStroke));
+    mouseStroke[0].state = INTERCEPTION_MOUSE_WHEEL;
+    mouseStroke[0].rolling = rolling;
+    interception_send(context, INTERCEPTION_MOUSE(0), (InterceptionStroke *)mouseStroke, sizeof(mouseStroke) / sizeof(InterceptionMouseStroke));
+    interception_destroy_context(context);
+    return Napi::Number::New(env, 0);
+}
+
+void win32KeyEvent(int key, MMKeyFlags flags){
+    int scan = MapVirtualKey(key & 0xff, MAPVK_VK_TO_VSC);
+
+	/* Set the scan code for extended keys */
+	switch (key)
+	{
+		case VK_RCONTROL:
+		case VK_SNAPSHOT: /* Print Screen */
+		case VK_RMENU: /* Right Alt / Alt Gr */
+		case VK_PAUSE: /* Pause / Break */
+		case VK_HOME:
+		case VK_UP:
+		case VK_PRIOR: /* Page up */
+		case VK_LEFT:
+		case VK_RIGHT:
+		case VK_END:
+		case VK_DOWN:
+		case VK_NEXT: /* 'Page Down' */
+		case VK_INSERT:
+		case VK_DELETE:
+		case VK_LWIN:
+		case VK_RWIN:
+		case VK_APPS: /* Application */
+		case VK_VOLUME_MUTE:
+		case VK_VOLUME_DOWN:
+		case VK_VOLUME_UP:
+		case VK_MEDIA_NEXT_TRACK:
+		case VK_MEDIA_PREV_TRACK:
+		case VK_MEDIA_STOP:
+		case VK_MEDIA_PLAY_PAUSE:
+		case VK_BROWSER_BACK:
+		case VK_BROWSER_FORWARD:
+		case VK_BROWSER_REFRESH:
+		case VK_BROWSER_STOP:
+		case VK_BROWSER_SEARCH:
+		case VK_BROWSER_FAVORITES:
+		case VK_BROWSER_HOME:
+		case VK_LAUNCH_MAIL:
+		{
+			flags |= KEYEVENTF_EXTENDEDKEY;
+			break;
+		}
+	}
+
+	/* Set the scan code for keyup */
+	if ( flags & KEYEVENTF_KEYUP ) {
+		scan |= 0x80;
+	}
+
+	flags |= KEYEVENTF_SCANCODE;
+}
+
+int GetFlagsFromValue(Napi::Value value, MMKeyFlags *flags){
+    if (!flags)
+		return -1;
+    
+    if(value.IsArray()){
+        // TODO
+    }
+}
+
+Napi::Value keyTap(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    if (info.Length() < 1)
+    {
+        napi_throw_error(env, "BadParameter", "Two parameters are required");
+        return Napi::Boolean::New(env, false);
+    }
+    MMKeyFlags flags = MOD_NONE;
+	MMKeyCode key;
+
+    char *k;
+
+    std::string kstr=info[0].As<Napi::String>().Utf8Value();
+    k = kstr.data();
+    
+    InterceptionContext context = interception_create_context();
+    InterceptionKeyStroke  keyStroke[2];
+
+    ZeroMemory(keyStroke, sizeof(keyStroke));
+    keyStroke[0].code  = MapVirtualKey('A', MAPVK_VK_TO_VSC);
+    keyStroke[0].state = INTERCEPTION_KEY_DOWN;
+    keyStroke[1].code  = MapVirtualKey('A', MAPVK_VK_TO_VSC);
+    keyStroke[1].state = INTERCEPTION_KEY_UP;
+    interception_send(context, INTERCEPTION_KEYBOARD(0), (InterceptionStroke *)keyStroke, sizeof(keyStroke) / sizeof(InterceptionKeyStroke));
+    interception_destroy_context(context);
+    return Napi::Number::New(env, 0);
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     exports.Set(Napi::String::New(env, "moveMouseRelative"), Napi::Function::New(env, moveMouseRelative));
     exports.Set(Napi::String::New(env, "moveMouse"), Napi::Function::New(env, moveMouse));
     exports.Set(Napi::String::New(env, "mouseClick"), Napi::Function::New(env, mouseClick));
+    exports.Set(Napi::String::New(env, "mouseToggle"), Napi::Function::New(env, mouseToggle));
+    exports.Set(Napi::String::New(env, "scrollMouse"), Napi::Function::New(env, scrollMouse));
+    exports.Set(Napi::String::New(env, "keyTap"), Napi::Function::New(env, keyTap));
 
     return exports;
 }
